@@ -59,7 +59,6 @@ d=din %>%
 
 Test for balanced data
 
-
 ```{r}
 table(d$serial_position, d$priority, d$suffix)
 ```
@@ -78,11 +77,24 @@ ggplot(data=d, aes(y=accuracy, x=serial_position, colour=priority))+
   stat_summary(fun.data="mean_se")+
   stat_summary(fun.data="mean_se", geom='line', aes(group=priority))+
   theme_bw()+
-  theme(panel.grid=element_blank())+
+  #theme(panel.grid=element_blank())+
   #scale_x_continuous(breaks=1:6)+
   labs(title = "Accuracy improves at position 5 (but not at other positions)\n when it is prioritised versus when it is not prioritised")
 ```
 
+
+```{r}
+dd=d %>% mutate(serial_position=as.numeric(serial_position))
+ggplot(data=dd, aes(y=accuracy, x=serial_position, colour=priority))+
+  facet_wrap(~suffix)+
+  geom_smooth(formula = y ~ s(x, bs = "cs", k=5))+
+  #stat_summary(fun.data="mean_se")+
+  #stat_summary(fun.data="mean_se", geom='line', aes(group=priority))+
+  theme_bw()+
+  #theme(panel.grid=element_blank())+
+  #scale_x_continuous(breaks=1:6)+
+  labs(title = "Accuracy improves at position 5 (but not at other positions)\n when it is prioritised versus when it is not prioritised")
+```
 ## Modelling
 
 Our first model will not try to capture the influence of prioritising position 5 at position 5.
@@ -138,7 +150,7 @@ m3 = glmer(
   family=binomial,
   formula=
     accuracy ~ block + suffix + serial_position + priority +
-      #serial_position : priority+
+      serial_position : priority+
       suffix : serial_position : priority +
       (1 | participant) + 
       (1 | trial)
@@ -159,7 +171,8 @@ d_subset=d %>% filter(serial_position==5)
 m4=glmer(data=d_subset,
       family=binomial,
       formula=
-        accuracy ~ block + suffix * priority +
+        accuracy ~ block + suffix + priority +
+        suffix:priority+
         (1 + suffix + priority | participant) + 
         (1 + suffix + priority | trial)
 )
