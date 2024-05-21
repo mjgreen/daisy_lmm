@@ -57,6 +57,13 @@ d=din %>%
   mutate(suffix = factor(suffix, levels=c("no_suffix", "suffix"), labels=c("SuffAbsent", "SuffPresent"))) 
 ```
 
+Test for balanced data
+
+
+```{r}
+table(d$serial_position, d$priority, d$suffix)
+```
+
 View the first few rows of the longest-form data.
 
 ```{r}
@@ -86,8 +93,7 @@ m1 = glmer(
   data=d,
   family=binomial,
   formula=
-        accuracy ~ block + suffix + 
-          serial_position + priority + 
+        accuracy ~ block + suffix + serial_position + priority + 
           (1 | participant) + 
           (1 | trial)
 )
@@ -108,11 +114,11 @@ In our next model, we particularly want to evaluate the interaction between seri
 m2 = glmer(data=d,
   family=binomial,
   formula=
-        accuracy ~ block + suffix + 
-          serial_position + priority + serial_position:priority +
-          (1 | participant) + 
-          (1 | trial)
-        )
+    accuracy ~ block + suffix + serial_position + priority + 
+    serial_position : priority +
+      (1 | participant) + 
+      (1 | trial)
+  )
 
 # just some visual formatting
 result_m2 = coef(summary(m2)) %>% as_tibble(rownames="effect") %>% 
@@ -127,16 +133,16 @@ Now we try to capture the 3-way interaction between suffix, serial position, and
 
 ```{r}
 # build the actual model
-m3 = glmer(data=d,
-           family=binomial,
-           formula=
-        accuracy ~ block + 
-          suffix + serial_position + priority +
-          serial_position:priority+
-          suffix:serial_position:priority+
-          (1 | participant) + 
-          (1 | trial)
-        )
+m3 = glmer(
+  data=d,
+  family=binomial,
+  formula=
+    accuracy ~ block + suffix + serial_position + priority +
+      #serial_position : priority+
+      suffix : serial_position : priority +
+      (1 | participant) + 
+      (1 | trial)
+    )
 
 # just some visual formatting
 result_m3 = coef(summary(m3)) %>% as_tibble(rownames="effect") %>% 
@@ -149,8 +155,8 @@ kable(result_m3, digits=3)
 
 
 ```{r}
-d=d %>% filter(serial_position==5)
-m4=glmer(data=d,
+d_subset=d %>% filter(serial_position==5)
+m4=glmer(data=d_subset,
       family=binomial,
       formula=
         accuracy ~ block + suffix * priority +
@@ -173,5 +179,47 @@ lattice::qqmath(ranef(m4, condVar = TRUE), strip = FALSE)$participant
 
 lattice::qqmath(ranef(m4, condVar = TRUE), strip = FALSE)$trial
 
+```
+
+```{r}
+m5=glmer(
+     data=d,
+     family=binomial,
+     formula=
+         accuracy ~ block + suffix + serial_position + priority +
+         #serial_position : priority+
+         suffix : serial_position : priority+
+         (1 | participant) + 
+         (1 | trial)
+)
+# just some visual formatting
+result_m5 = coef(summary(m5)) %>% as_tibble(rownames="effect") %>% 
+  rename(p=`Pr(>|z|)`) %>% 
+  mutate(sig=ifelse(p<.001, "***", ifelse(p<.01, "**", ifelse(p<0.05, "*", ""))))
+
+# show a table
+kable(result_m5, digits=3)
+```
+
+```{r}
+d$serial_position <- as.numeric(d$serial_position)
+
+fit1 = glmer(
+     data=d,
+     family=binomial,
+     formula=
+         accuracy ~ block + suffix + serial_position + priority +
+         suffix : serial_position : priority+
+         (1 | participant) +
+       (1|trial)
+)
+
+# just some visual formatting
+result_fit1 = coef(summary(fit1)) %>% as_tibble(rownames="effect") %>% 
+  rename(p=`Pr(>|z|)`) %>% 
+  mutate(sig=ifelse(p<.001, "***", ifelse(p<.01, "**", ifelse(p<0.05, "*", ""))))
+
+# show a table
+kable(result_fit1, digits=3)
 ```
 
